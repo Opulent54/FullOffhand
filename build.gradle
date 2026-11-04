@@ -9,6 +9,16 @@ base {
     archivesName = project.archives_base_name
 }
 
+repositories {
+    maven {
+        url = 'https://maven.fabricmc.net/'
+    }
+    maven {
+        url = 'https://repo.opencollab.dev/main/'
+    }
+    mavenCentral()
+}
+
 dependencies {
     minecraft "com.mojang:minecraft:${project.minecraft_version}"
     mappings loom.officialMojangMappings()

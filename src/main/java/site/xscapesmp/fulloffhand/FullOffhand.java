@@ -64,18 +64,25 @@ public final class FullOffhand implements ModInitializer {
         form.validResultHandler(response -> {
             int selected = response.clickedButtonId();
             // Form callbacks may run outside the Minecraft server thread.
-            player.getServer().execute(() -> {
-                ServerPlayer current = player.getServer().getPlayerList().getPlayer(playerId);
-                if (current == null || !current.isAlive()) {
-                    return;
-                }
-                if (selected >= 0 && selected < 9) {
-                    moveHotbarSlotToOffhand(current, selected);
-                } else if (selected == 9) {
-                    swapHands(current);
-                }
-            });
-        });
+            var server = player.level().getServer();
+
+form.validResultHandler(response -> {
+    int selected = response.clickedButtonId();
+
+    server.execute(() -> {
+        ServerPlayer current = server.getPlayerList().getPlayer(playerId);
+
+        if (current == null || !current.isAlive()) {
+            return;
+        }
+
+        if (selected >= 0 && selected < 9) {
+            moveHotbarSlotToOffhand(current, selected);
+        } else if (selected == 9) {
+            swapHands(current);
+        }
+    });
+});
 
         api.sendForm(playerId, form.build());
     }

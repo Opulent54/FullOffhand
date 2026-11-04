@@ -6,6 +6,7 @@ import net.fabricmc.fabric.api.command.v2.CommandRegistrationCallback;
 import net.minecraft.commands.CommandSourceStack;
 import net.minecraft.commands.Commands;
 import net.minecraft.network.chat.Component;
+import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.item.ItemStack;
@@ -41,73 +42,86 @@ public final class FullOffhand implements ModInitializer {
 
     private static void openBedrockMenu(ServerPlayer player) {
         GeyserApi api = GeyserApi.api();
+
         if (api == null || api.connectionByUuid(player.getUUID()) == null) {
-            player.sendSystemMessage(Component.literal(PREFIX +
-                    "This menu is only available to Bedrock players connected through Geyser."));
+            player.sendSystemMessage(Component.literal(
+                    PREFIX + "This menu is only available to Bedrock players connected through Geyser."
+            ));
             return;
         }
 
         SimpleForm.Builder form = SimpleForm.builder()
                 .title("Offhand")
-                .content("Choose an item from your hotbar to equip in your offhand. " +
-                         "The item currently in your offhand moves into that hotbar slot.");
+                .content(
+                        "Choose an item from your hotbar to equip in your offhand. " +
+                        "The item currently in your offhand moves into that hotbar slot."
+                );
 
         for (int slot = 0; slot < 9; slot++) {
             ItemStack stack = player.getInventory().getItem(slot);
             String label = (slot + 1) + ". " +
-                    (stack.isEmpty() ? "Empty" : stack.getHoverName().getString() + " x" + stack.getCount());
+                    (stack.isEmpty()
+                            ? "Empty"
+                            : stack.getHoverName().getString() + " x" + stack.getCount());
+
             form.button(label);
         }
+
         form.button("Swap main hand and offhand");
 
         UUID playerId = player.getUUID();
+        MinecraftServer server = player.level().getServer();
+
         form.validResultHandler(response -> {
             int selected = response.clickedButtonId();
-            // Form callbacks may run outside the Minecraft server thread.
-            var server = player.level().getServer();
 
-form.validResultHandler(response -> {
-    int selected = response.clickedButtonId();
+            // Cumulus form callbacks may execute away from the Minecraft server thread.
+            // Always re-fetch the player on the server thread before changing inventory.
+            server.execute(() -> {
+                ServerPlayer current = server.getPlayerList().getPlayer(playerId);
 
-    server.execute(() -> {
-        ServerPlayer current = server.getPlayerList().getPlayer(playerId);
+                if (current == null || !current.isAlive()) {
+                    return;
+                }
 
-        if (current == null || !current.isAlive()) {
-            return;
-        }
-
-        if (selected >= 0 && selected < 9) {
-            moveHotbarSlotToOffhand(current, selected);
-        } else if (selected == 9) {
-            swapHands(current);
-        }
-    });
-});
+                if (selected >= 0 && selected < 9) {
+                    moveHotbarSlotToOffhand(current, selected);
+                } else if (selected == 9) {
+                    swapHands(current);
+                }
+            });
+        });
 
         api.sendForm(playerId, form.build());
     }
 
     private static void moveHotbarSlotToOffhand(ServerPlayer player, int slot) {
-        if (slot < 0 || slot > 8) return;
+        if (slot < 0 || slot > 8) {
+            return;
+        }
 
         ItemStack selected = player.getInventory().getItem(slot).copy();
         ItemStack previousOffhand = player.getOffhandItem().copy();
 
         player.getInventory().setItem(slot, previousOffhand);
         player.setItemInHand(InteractionHand.OFF_HAND, selected);
+
         player.getInventory().setChanged();
         player.containerMenu.broadcastChanges();
+
         player.sendSystemMessage(Component.literal(PREFIX + "Offhand updated."));
     }
 
     private static void swapHands(ServerPlayer player) {
-        ItemStack main = player.getMainHandItem().copy();
-        ItemStack off = player.getOffhandItem().copy();
+        ItemStack mainHand = player.getMainHandItem().copy();
+        ItemStack offhand = player.getOffhandItem().copy();
 
-        player.setItemInHand(InteractionHand.MAIN_HAND, off);
-        player.setItemInHand(InteractionHand.OFF_HAND, main);
+        player.setItemInHand(InteractionHand.MAIN_HAND, offhand);
+        player.setItemInHand(InteractionHand.OFF_HAND, mainHand);
+
         player.getInventory().setChanged();
         player.containerMenu.broadcastChanges();
+
         player.sendSystemMessage(Component.literal(PREFIX + "Hands swapped."));
     }
 }

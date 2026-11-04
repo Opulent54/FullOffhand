@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "id": "fulloffhand",
+  "version": "${version}",
+  "name": "FullOffhand",
+  "description": "Bedrock offhand selection UI for Geyser-Fabric. Java players retain vanilla behaviour.",
+  "authors": [
+    "FullOffhand contributors"
+  ],
+  "contact": {},
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {
+    "main": [
+      "site.xscapesmp.fulloffhand.FullOffhand"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=0.20.1",
+    "minecraft": "~26.3",
+    "fabric-api": "*",
+    "geyser": "*",
+    "java": ">=25"
+  }
+}
